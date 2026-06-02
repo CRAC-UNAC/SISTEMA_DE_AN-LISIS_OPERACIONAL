@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRAC Analytics — Sistema de Análisis Operacional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+<style>
+/* ── VARIABLES ─────────────────────────────────────────── */
+:root{
+  --cyan:#00E5FF;--cyan2:#00B4D8;--bg:#050B16;--bg2:#081120;
+  --card:rgba(10,20,40,0.80);--border:rgba(0,229,255,0.15);
+  --green:#00C853;--yellow:#FFC107;--red:#FF3B30;
+  --text:#E0F4FF;--muted:#5A8099;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--cyan);border-radius:2px}
+body::before{content:'';position:fixed;inset:0;z-index:0;
+  background:radial-gradient(ellipse 60% 40% at 20% 10%,rgba(0,229,255,0.05) 0%,transparent 60%),
+  radial-gradient(ellipse 40% 60% at 80% 80%,rgba(0,229,255,0.03) 0%,transparent 60%);
+  pointer-events:none}
+body::after{content:'';position:fixed;inset:0;z-index:0;
+  background-image:radial-gradient(rgba(0,229,255,0.04) 1px,transparent 1px);
+  background-size:32px 32px;pointer-events:none}
+
+/* ── LAYOUT ──────────────────────────────────────────────── */
+.app{display:grid;grid-template-rows:60px 1fr;grid-template-columns:210px 1fr;
+  grid-template-areas:"hd hd""sb mn";min-height:100vh;position:relative;z-index:1}
+
+/* ── HEADER ──────────────────────────────────────────────── */
+header{grid-area:hd;display:flex;align-items:center;gap:10px;padding:0 14px;
+  background:rgba(5,11,22,0.98);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(20px);position:sticky;top:0;z-index:100}
+.hlogo{height:33px;object-fit:contain;filter:drop-shadow(0 0 7px rgba(0,229,255,0.4))}
+.htitle{flex:1;text-align:center}
+.htitle h1{font-family:'Orbitron',monospace;font-size:12.5px;font-weight:700;
+  letter-spacing:.1em;color:var(--cyan);text-shadow:0 0 18px rgba(0,229,255,0.5)}
+.htitle p{font-size:9px;color:var(--muted);letter-spacing:.22em}
+.hf{display:flex;align-items:center;gap:5px}
+.fl{font-size:7px;font-weight:700;color:var(--muted);letter-spacing:.1em;
+  text-transform:uppercase;margin-bottom:2px}
+select.fs{background:rgba(0,229,255,0.06);border:1px solid var(--border);border-radius:5px;
+  color:var(--text);font-size:10px;padding:3px 6px;cursor:pointer;outline:none;
+  min-width:82px;transition:border-color .2s}
+select.fs:hover,select.fs:focus{border-color:var(--cyan)}
+select.fs option{background:#0D1B2A}
+
+/* ── SIDEBAR ──────────────────────────────────────────────── */
+aside{grid-area:sb;background:rgba(5,11,22,0.94);border-right:1px solid var(--border);
+  backdrop-filter:blur(16px);display:flex;flex-direction:column;padding:10px 0;
+  position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto}
+.ni{display:flex;align-items:center;gap:9px;padding:9px 15px;color:var(--muted);
+  font-size:11px;font-weight:500;cursor:pointer;transition:all .2s;
+  border-left:2px solid transparent;white-space:nowrap;text-decoration:none}
+.ni:hover{color:var(--text);background:rgba(0,229,255,0.05)}
+.ni.active{color:var(--cyan);background:rgba(0,229,255,0.08);border-left-color:var(--cyan)}
+.ni i{width:14px;text-align:center;font-size:11px;flex-shrink:0}
+.nsep{height:1px;background:var(--border);margin:6px 14px}
+.sfooter{margin-top:auto;padding:11px 14px;border-top:1px solid var(--border);
+  font-size:8.5px;color:var(--muted);line-height:1.7}
+
+/* ── MAIN ──────────────────────────────────────────────────── */
+main{grid-area:mn;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;
+  padding-bottom:48px}
+
+/* ── SECCIÓN TÍTULOS ──────────────────────────────────────── */
+.sec-anchor{scroll-margin-top:12px}
+
+/* ── GLASS CARD ──────────────────────────────────────────── */
+.gc{background:var(--card);border:1px solid var(--border);border-radius:11px;
+  backdrop-filter:blur(16px);overflow:hidden}
+.ch{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;border-bottom:1px solid var(--border)}
+.ct{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text)}
+.ctc{color:var(--cyan);text-shadow:0 0 8px rgba(0,229,255,0.35)}
+
+/* ── KPI ──────────────────────────────────────────────────── */
+.krow{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
+.kc{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:11px 9px;
+  backdrop-filter:blur(16px);position:relative;overflow:hidden;
+  transition:transform .2s,box-shadow .2s}
+.kc:hover{transform:translateY(-2px);box-shadow:0 0 18px rgba(0,229,255,0.25)}
+.kc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--kc,var(--cyan)),transparent)}
+.kico{font-size:19px;margin-bottom:5px;opacity:.9}
+.klbl{font-size:7.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:3px}
+.kval{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ksub{font-size:8px;color:var(--muted);margin-top:2px}
+.kbar{height:24px;margin-top:5px;border-radius:3px;overflow:hidden;
+  background:rgba(0,229,255,0.05)}
+.kbar-fill{height:100%;width:0%;transition:width 1.5s ease;border-radius:3px}
+
+/* ── SKELETON ──────────────────────────────────────────────── */
+.sk{background:linear-gradient(90deg,rgba(0,229,255,0.03) 25%,rgba(0,229,255,0.09) 50%,rgba(0,229,255,0.03) 75%);
+  background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+
+/* ── GRIDS ──────────────────────────────────────────────────── */
+.g3{display:grid;grid-template-columns:1fr 1.7fr 1.2fr;gap:10px}
+.g2{display:grid;grid-template-columns:1fr 1.8fr;gap:10px}
+.g3m{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+
+/* ── RANKING ──────────────────────────────────────────────── */
+.ri{display:flex;align-items:center;gap:6px;padding:5px 0;
+  border-bottom:1px solid rgba(0,229,255,0.05)}
+.ri:last-child{border-bottom:none}
+.rpos{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;
+  color:var(--cyan);min-width:20px}
+.rnom{font-size:9.5px;font-weight:500;flex:1;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.rbw{width:60px;height:3px;background:rgba(255,255,255,0.05);border-radius:2px;flex-shrink:0}
+.rb{height:100%;border-radius:2px;width:0%;transition:width 1s ease}
+.rval{font-size:9px;font-weight:600;color:var(--cyan);min-width:65px;text-align:right}
+
+/* ── MAPA ──────────────────────────────────────────────────── */
+#mapa{width:100%;height:100%;border-radius:0 0 9px 9px}
+.mapa-wrap{position:relative;height:300px}
+.mleg{position:absolute;bottom:24px;right:7px;z-index:10;
+  background:rgba(5,11,22,0.93);border:1px solid var(--border);
+  border-radius:7px;padding:7px 10px;font-size:9px;pointer-events:none}
+.mli{display:flex;align-items:center;gap:5px;margin-bottom:2px}
+.mld{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+
+/* ── GAUGE / META ──────────────────────────────────────────── */
+.gwrap{display:flex;flex-direction:column;align-items:center;padding:10px 4px}
+.gpct{font-family:'Orbitron',monospace;font-size:22px;font-weight:900;
+  color:var(--cyan);text-shadow:0 0 18px rgba(0,229,255,0.6)}
+.mc{background:rgba(0,229,255,0.04);border:1px solid var(--border);
+  border-radius:9px;padding:12px;text-align:center}
+.mct{font-size:7.5px;font-weight:700;letter-spacing:.1em;color:var(--muted);
+  text-transform:uppercase;margin-bottom:5px}
+.mcv{font-family:'Orbitron',monospace;font-size:15px;font-weight:700;
+  color:var(--cyan);text-shadow:0 0 12px rgba(0,229,255,0.4)}
+.mcs{font-size:8px;color:var(--muted);margin-top:3px}
+
+/* ── ALERTAS ──────────────────────────────────────────────── */
+.ai{display:flex;align-items:flex-start;gap:8px;padding:8px 12px;
+  border-bottom:1px solid rgba(0,229,255,0.05);transition:background .2s}
+.ai:hover{background:rgba(0,229,255,0.03)}
+
+/* ── COMPARATIVA ──────────────────────────────────────────── */
+.ubtn{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:18px;
+  font-size:9px;font-weight:600;cursor:pointer;border:1px solid var(--border);transition:all .2s}
+.ubtn.act{background:rgba(0,229,255,0.12);color:var(--cyan);border-color:var(--cyan)}
+.ubtn:not(.act){color:var(--muted)}
+.ubtn:not(.act):hover{color:var(--text);border-color:rgba(0,229,255,0.3)}
+
+/* ── PERSONAL ──────────────────────────────────────────────── */
+.ptbl{width:100%;border-collapse:collapse;font-size:10px}
+.ptbl th{padding:6px 9px;text-align:center;font-size:7.5px;font-weight:700;
+  color:var(--muted);letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.ptbl th:first-child{text-align:left}
+.ptbl td{padding:6px 9px;text-align:center;border-bottom:1px solid rgba(0,229,255,0.04)}
+.ptbl td:first-child{text-align:left}
+.ptbl tr:hover td{background:rgba(0,229,255,0.02)}
+
+/* ── MISC ──────────────────────────────────────────────────── */
+.ss{background:rgba(0,229,255,0.06);border:1px solid var(--border);border-radius:5px;
+  color:var(--text);font-size:9px;padding:3px 7px;cursor:pointer;outline:none}
+.ss option{background:#0D1B2A}
+.ld{font-size:8px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.ld::before{content:'';width:5px;height:5px;border-radius:50%;
+  background:var(--cyan);animation:blink 1s infinite;flex-shrink:0}
+
+/* ── ERROR STATE ──────────────────────────────────────────── */
+.error-box{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;padding:40px;text-align:center;color:var(--muted)}
+.error-box i{font-size:32px;color:var(--red)}
+.error-box h3{font-size:14px;font-weight:600;color:var(--text)}
+.error-box p{font-size:11px;max-width:380px;line-height:1.6}
+.retry-btn{background:rgba(0,229,255,0.1);border:1px solid var(--cyan);
+  color:var(--cyan);border-radius:6px;padding:8px 20px;font-size:11px;
+  font-weight:600;cursor:pointer;transition:all .2s}
+.retry-btn:hover{background:rgba(0,229,255,0.2)}
+
+/* ── BOTTOM BAR ──────────────────────────────────────────── */
+.bb{position:fixed;bottom:0;left:210px;right:0;z-index:50;
+  background:rgba(5,11,22,0.98);border-top:1px solid var(--border);
+  padding:6px 16px;display:flex;align-items:center;justify-content:center;
+  gap:14px;backdrop-filter:blur(16px)}
+.bbt{font-family:'Orbitron',monospace;font-size:9.5px;font-weight:700;
+  color:var(--cyan);text-shadow:0 0 8px rgba(0,229,255,0.5)}
+
+/* ── ANIMACIONES ──────────────────────────────────────────── */
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes mpulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.7}}
+.fi{animation:fadeUp .45s ease forwards}
+.fi1{animation:fadeUp .45s .08s ease both}
+.fi2{animation:fadeUp .45s .16s ease both}
+.fi3{animation:fadeUp .45s .24s ease both}
+
+/* ── RESPONSIVE ──────────────────────────────────────────── */
+@media(max-width:1200px){.krow{grid-template-columns:repeat(3,1fr)}.g3{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){
+  aside{display:none}
+  .app{grid-template-columns:1fr;grid-template-areas:"hd""mn"}
+  .krow{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}
+  .bb{left:0}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══════════ HEADER ═══════════ -->
+<header>
+  <img src="https://www.policia.gob.ec/wp-content/uploads/2026/02/logocrac.png"
+       class="hlogo" alt="CRAC" onerror="this.style.display='none'">
+  <div class="htitle">
+    <h1>SISTEMA DE ANÁLISIS OPERACIONAL</h1>
+    <p>INTELIGENCIA &bull; CONTROL &bull; EFICIENCIA</p>
+  </div>
+  <div class="hf">
+    <div><div class="fl">AÑO</div>
+      <select class="fs" id="f-year">
+        <option value="TODOS">Todos</option>
+        <option value="2022">2022</option><option value="2023">2023</option>
+        <option value="2024">2024</option><option value="2025">2025</option>
+        <option value="2026" selected>2026</option>
+      </select></div>
+    <div><div class="fl">PERIODO</div>
+      <select class="fs" id="f-periodo">
+        <option value="TODOS">Ene–Dic</option>
+        <option value="T1">Trimestre 1</option><option value="T2">Trimestre 2</option>
+        <option value="T3">Trimestre 3</option><option value="T4">Trimestre 4</option>
+        <option value="S1">Semestre 1</option><option value="S2">Semestre 2</option>
+        <option value="ENERO">Enero</option><option value="FEBRERO">Febrero</option>
+        <option value="MARZO">Marzo</option><option value="ABRIL">Abril</option>
+        <option value="MAYO">Mayo</option><option value="JUNIO">Junio</option>
+      </select></div>
+    <div><div class="fl">ZONA</div>
+      <select class="fs" id="f-zona">
+        <option value="TODAS">Todas</option>
+        <option value="Z001">Zona 1</option><option value="Z002">Zona 2</option>
+        <option value="Z003">Zona 3</option><option value="Z004">Zona 4</option>
+        <option value="Z005">Zona 5</option><option value="Z007">Zona 7</option>
+        <option value="Z008">Zona 8</option><option value="Z009">Zona 9</option>
+      </select></div>
+    <div><div class="fl">JEFATURA</div>
+      <select class="fs" id="f-jefatura">
+        <option value="TODAS">Todas</option>
+        <option value="J001">JOPC_CARCHI</option><option value="J002">JOPC_TABABUELA</option>
+        <option value="J003">JOPC_ESMERALDAS</option><option value="J004">JOPC_SUCUMBIOS</option>
+        <option value="J005">JOPC_BAEZA</option><option value="J006">JOPC_LATACUNGA</option>
+        <option value="J007">JOPC_MANTA</option><option value="J008">JOPC_GALAPAGOS</option>
+        <option value="J009">JOPC_MACHALA</option><option value="J010">JOPC_AIJJO</option>
+        <option value="J011">JOPC_CONTECON</option><option value="J012">JOPC_NAPORTEC</option>
+        <option value="J013">JOPC_TPG</option><option value="J014">JOPC_POSORJA</option>
+        <option value="J015">JOPC_AIMS</option><option value="J016">UCMA</option>
+      </select></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;padding:4px 9px;
+      background:rgba(0,229,255,0.05);border:1px solid var(--border);border-radius:7px">
+    <div><div style="font-size:10px;font-weight:600">Administrador</div>
+      <div style="font-size:8px;color:var(--green)">⬤ En línea</div></div>
+  </div>
+  <img src="https://www.policia.gob.ec/wp-content/uploads/2023/10/logoOfi.png"
+       class="hlogo" alt="Policía" onerror="this.style.display='none'">
+</header>
+
+<!-- ═══════════ SIDEBAR — solo secciones funcionales ═══════════ -->
+<aside>
+  <a class="ni active" href="#sec-dashboard" onclick="navTo('sec-dashboard',this)">
+    <i class="fas fa-chart-line"></i>Dashboard</a>
+  <a class="ni" href="#sec-mapa" onclick="navTo('sec-mapa',this)">
+    <i class="fas fa-map-marked-alt"></i>Mapa Operacional</a>
+  <div class="nsep"></div>
+  <a class="ni" href="#sec-tendencias" onclick="navTo('sec-tendencias',this)">
+    <i class="fas fa-chart-area"></i>Tendencias</a>
+  <a class="ni" href="#sec-comparativa" onclick="navTo('sec-comparativa',this)">
+    <i class="fas fa-balance-scale"></i>Comparativas</a>
+  <div class="nsep"></div>
+  <a class="ni" href="#sec-personal" onclick="navTo('sec-personal',this)">
+    <i class="fas fa-users"></i>Personal Policial</a>
+  <div class="nsep"></div>
+  <a class="ni" href="#sec-meta" onclick="navTo('sec-meta',this)">
+    <i class="fas fa-bullseye"></i>Meta CRAC 2026</a>
+  <a class="ni" href="#sec-alertas" onclick="navTo('sec-alertas',this)">
+    <i class="fas fa-bell"></i>Alertas
+    <span id="abadge" style="margin-left:auto;background:var(--red);color:#fff;
+      border-radius:10px;padding:1px 5px;font-size:8px;font-weight:700;display:none">0</span>
+  </a>
+
+  <div class="sfooter">
+    <div>Actualizado: <span id="lu" style="color:var(--cyan)">—</span></div>
+    <div id="conn-status" style="color:var(--green)">⬤ Conectando...</div>
+  </div>
+</aside>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<main id="main-content">
+
+  <!-- Mensaje de error global (oculto por defecto) -->
+  <div id="error-global" style="display:none" class="gc">
+    <div class="error-box">
+      <i class="fas fa-exclamation-triangle"></i>
+      <h3>No se pudo conectar con Google Sheets</h3>
+      <p id="error-msg">Verifica que la URL del Apps Script esté correctamente configurada en el archivo y que el despliegue tenga acceso "Cualquier persona".</p>
+      <button class="retry-btn" onclick="reload()"><i class="fas fa-redo"></i> Reintentar conexión</button>
+      <div style="font-size:10px;color:var(--muted);margin-top:8px">
+        URL configurada: <code id="error-url" style="color:var(--yellow);font-size:9px"></code>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECCIÓN: DASHBOARD (KPIs) ── -->
+  <div id="sec-dashboard" class="sec-anchor">
+    <div class="krow fi" id="kpi-section">
+      <div class="kc" style="--kc:#00E5FF">
+        <div class="kico">⚖️</div>
+        <div class="klbl">Incautación Total <span id="kyi" style="color:var(--cyan);font-size:7px">2026</span></div>
+        <div class="kval" id="kpi-total"><div class="sk" style="height:13px;width:80%"></div></div>
+        <div class="ksub" id="kmsub">Cargando...</div>
+        <div class="kbar"><div class="kbar-fill" id="bt" style="background:linear-gradient(90deg,rgba(0,229,255,0.35),rgba(0,229,255,0.75))"></div></div>
+      </div>
+      <div class="kc" style="--kc:#D0D0D0">
+        <div class="kico">🤍</div><div class="klbl">Cocaína</div>
+        <div class="kval" id="kpi-cocaina"><div class="sk" style="height:13px;width:70%"></div></div>
+        <div class="ksub" id="kpc">Cargando...</div>
+        <div class="kbar"><div class="kbar-fill" id="bc" style="background:linear-gradient(90deg,rgba(200,200,200,0.25),rgba(200,200,200,0.6))"></div></div>
+      </div>
+      <div class="kc" style="--kc:#00C853">
+        <div class="kico">🍀</div><div class="klbl">Marihuana</div>
+        <div class="kval" id="kpi-marihuana"><div class="sk" style="height:13px;width:70%"></div></div>
+        <div class="ksub" id="kpm">Cargando...</div>
+        <div class="kbar"><div class="kbar-fill" id="bm" style="background:linear-gradient(90deg,rgba(0,200,83,0.3),rgba(0,200,83,0.7))"></div></div>
+      </div>
+      <div class="kc" style="--kc:#FF3B30">
+        <div class="kico">💉</div><div class="klbl">Heroína</div>
+        <div class="kval" id="kpi-heroina"><div class="sk" style="height:13px;width:70%"></div></div>
+        <div class="ksub" id="kph">Cargando...</div>
+        <div class="kbar"><div class="kbar-fill" id="bh" style="background:linear-gradient(90deg,rgba(255,59,48,0.3),rgba(255,59,48,0.7))"></div></div>
+      </div>
+      <div class="kc" style="--kc:#9C27B0">
+        <div class="kico">📂</div><div class="klbl">Casos</div>
+        <div class="kval" id="kpi-casos"><div class="sk" style="height:13px;width:60%"></div></div>
+        <div class="ksub">Procedimientos</div>
+      </div>
+      <div class="kc" style="--kc:#FFC107">
+        <div class="kico">🔒</div><div class="klbl">Detenidos</div>
+        <div class="kval" id="kpi-detenidos"><div class="sk" style="height:13px;width:60%"></div></div>
+        <div class="ksub">Personas aprehendidas</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FILA: RANKING / MAPA / TENDENCIAS ── -->
+  <div class="g3 fi1" id="sec-mapa">
+
+    <!-- RANKING -->
+    <div class="gc">
+      <div class="ch">
+        <span class="ct">RANKING JEFATURAS</span>
+        <select class="ss" id="ry">
+          <option value="2022">2022</option><option value="2023">2023</option>
+          <option value="2024">2024</option><option value="2025">2025</option>
+          <option value="2026" selected>2026</option>
+        </select>
+      </div>
+      <div style="padding:5px 10px 8px" id="rl">
+        <div class="sk" style="height:11px;margin:6px 0"></div>
+        <div class="sk" style="height:11px;margin:6px 0;width:85%"></div>
+        <div class="sk" style="height:11px;margin:6px 0;width:75%"></div>
+        <div class="sk" style="height:11px;margin:6px 0;width:65%"></div>
+        <div class="sk" style="height:11px;margin:6px 0;width:55%"></div>
+      </div>
+      <div style="padding:5px 10px 8px;border-top:1px solid var(--border)">
+        <button onclick="showModal()" style="font-size:10px;background:rgba(0,229,255,0.06);
+          border:1px solid var(--border);border-radius:5px;padding:5px 9px;color:var(--cyan);
+          cursor:pointer;width:100%">Ver ranking completo</button>
+      </div>
+    </div>
+
+    <!-- MAPA OPERACIONAL -->
+    <div class="gc">
+      <div class="ch">
+        <span class="ct ctc">MAPA OPERACIONAL NACIONAL</span>
+        <span class="ld" id="ms">Cargando mapa...</span>
+      </div>
+      <div class="mapa-wrap">
+        <div id="mapa"></div>
+        <div class="mleg">
+          <div style="font-size:7.5px;font-weight:700;color:var(--muted);
+            letter-spacing:.1em;margin-bottom:4px">NIVEL</div>
+          <div class="mli"><div class="mld" style="background:#00C853"></div><span>Muy Alto</span></div>
+          <div class="mli"><div class="mld" style="background:#7BFF6A"></div><span>Alto</span></div>
+          <div class="mli"><div class="mld" style="background:#FFC107"></div><span>Medio</span></div>
+          <div class="mli"><div class="mld" style="background:#FF3B30"></div><span>Bajo / Sin datos</span></div>
+        </div>
+        <div style="position:absolute;bottom:7px;left:50%;transform:translateX(-50%);
+          font-size:8px;color:var(--muted);background:rgba(5,11,22,0.85);
+          padding:2px 8px;border-radius:3px;pointer-events:none;white-space:nowrap">
+          Clic en punto para ver detalle
+        </div>
+      </div>
+    </div>
+
+    <!-- TENDENCIAS -->
+    <div class="gc sec-anchor" id="sec-tendencias">
+      <div class="ch">
+        <span class="ct">TENDENCIA HISTÓRICA</span>
+        <span style="font-size:8px;color:var(--muted)">en gramos</span>
+      </div>
+      <div id="ct" style="height:245px;padding:4px">
+        <div class="sk" style="height:100%;margin:4px"></div>
+      </div>
+      <div style="padding:4px 11px;border-top:1px solid var(--border)">
+        <span id="me" style="font-size:8.5px;color:var(--yellow);font-style:italic"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FILA: PERSONAL / COMPARATIVA ── -->
+  <div class="g2 fi2">
+
+    <!-- PERSONAL -->
+    <div class="gc sec-anchor" id="sec-personal">
+      <div class="ch"><span class="ct">PERSONAL POR JEFATURA</span></div>
+      <div style="overflow-x:auto;max-height:250px;overflow-y:auto">
+        <table class="ptbl">
+          <thead><tr>
+            <th>Jefatura</th>
+            <th><i class="fas fa-star" style="color:var(--yellow)"></i> Direct.</th>
+            <th><i class="fas fa-dog" style="color:var(--cyan)"></i> T.O.Guías</th>
+            <th><i class="fas fa-clipboard" style="color:var(--muted)"></i> Admin.</th>
+            <th>Total</th>
+          </tr></thead>
+          <tbody id="ptb">
+            <tr><td colspan="5"><div class="sk" style="height:10px;margin:3px 0"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- COMPARATIVA MENSUAL -->
+    <div class="gc sec-anchor" id="sec-comparativa">
+      <div class="ch">
+        <span class="ct">COMPARATIVA MENSUAL</span>
+        <div style="display:flex;align-items:center;gap:5px">
+          <div style="display:flex;gap:3px">
+            <button class="ubtn act" id="bgr" onclick="setU('g')">Gramos</button>
+            <button class="ubtn" id="bkg" onclick="setU('kg')">Kilogramos</button>
+          </div>
+          <select class="ss" id="cj" style="min-width:115px">
+            <option value="TODAS">Todas las Jefaturas</option>
+            <option value="J001">JOPC_CARCHI</option><option value="J002">JOPC_TABABUELA</option>
+            <option value="J003">JOPC_ESMERALDAS</option><option value="J004">JOPC_SUCUMBIOS</option>
+            <option value="J005">JOPC_BAEZA</option><option value="J006">JOPC_LATACUNGA</option>
+            <option value="J007">JOPC_MANTA</option><option value="J008">JOPC_GALAPAGOS</option>
+            <option value="J009">JOPC_MACHALA</option><option value="J010">JOPC_AIJJO</option>
+            <option value="J011">JOPC_CONTECON</option><option value="J012">JOPC_NAPORTEC</option>
+            <option value="J013">JOPC_TPG</option><option value="J014">JOPC_POSORJA</option>
+            <option value="J015">JOPC_AIMS</option><option value="J016">UCMA</option>
+          </select>
+        </div>
+      </div>
+      <!-- Alertas déficit -->
+      <div id="cad" style="padding:5px 11px;display:flex;flex-wrap:wrap;gap:4px;
+        border-bottom:1px solid var(--border);min-height:28px;align-items:center"></div>
+      <!-- Gráfico -->
+      <div id="cc" style="height:215px;padding:3px">
+        <div class="sk" style="height:100%;margin:3px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FILA: META CRAC / ALERTAS ── -->
+  <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:10px" class="fi3">
+
+    <!-- META CRAC -->
+    <div class="gc sec-anchor" id="sec-meta">
+      <div class="ch">
+        <span class="ct">META CRAC 2026</span>
+        <span style="font-size:8px;color:var(--yellow)">Solo APLICA_META_CRAC = SI · Solo 2026</span>
+      </div>
+      <div class="g3m" style="padding:10px;align-items:center">
+        <div class="gwrap">
+          <div id="cg" style="width:155px;height:135px"></div>
+          <div class="gpct" id="gp">—%</div>
+          <div style="font-size:8px;color:var(--muted);margin-top:2px;text-align:center" id="gs">
+            Cargando...</div>
+        </div>
+        <div class="mc">
+          <div class="mct">PROYECCIÓN ANUAL</div>
+          <div class="mcv" id="mproy">—</div>
+          <div class="mcs">Proyección al 31 Dic 2026</div>
+          <div style="margin-top:6px;font-family:'Orbitron',monospace;font-size:13px;
+            color:var(--green)" id="mprob">—%</div>
+          <div style="font-size:8px;color:var(--muted)">Probabilidad de cumplimiento</div>
+        </div>
+        <div class="mc">
+          <div class="mct">VARIACIÓN 2025 → 2026</div>
+          <div class="mcv" id="mv" style="font-size:18px">—</div>
+          <div class="mcs">vs mismo periodo 2025<br>
+            <small style="font-size:7px;opacity:.6">(mismo n° de meses)</small></div>
+          <div id="mvc" style="height:44px;margin-top:6px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALERTAS -->
+    <div class="gc sec-anchor" id="sec-alertas">
+      <div class="ch">
+        <span class="ct ctc">ALERTAS AUTOMÁTICAS</span>
+        <span id="abadge2" style="background:rgba(255,59,48,.15);color:var(--red);
+          border:1px solid rgba(255,59,48,.3);border-radius:10px;padding:1px 7px;
+          font-size:8.5px;font-weight:700;display:none">0</span>
+      </div>
+      <div id="al">
+        <div class="sk" style="height:34px;margin:7px 11px;border-radius:5px"></div>
+        <div class="sk" style="height:34px;margin:7px 11px;border-radius:5px;width:90%"></div>
+        <div class="sk" style="height:34px;margin:7px 11px;border-radius:5px;width:95%"></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="bb">
+  <span style="color:var(--cyan);font-size:10px">▶ ▶</span>
+  <div class="bbt" id="bbt">CONECTANDO CON GOOGLE SHEETS...</div>
+  <div id="bts" style="font-size:9px;color:var(--muted);transition:opacity .3s">Inicializando sistema...</div>
+  <span style="color:var(--cyan);font-size:10px">◀ ◀</span>
+</div>
+
+<!-- MODAL RANKING -->
+<div id="modR" style="display:none;position:fixed;inset:0;z-index:999;
+  background:rgba(5,11,22,0.94);backdrop-filter:blur(16px);
+  align-items:center;justify-content:center;padding:16px">
+  <div style="background:rgba(8,17,32,0.98);border:1px solid var(--border);
+    border-radius:12px;max-width:640px;width:100%;max-height:80vh;
+    overflow:hidden;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;
+      padding:11px 15px;border-bottom:1px solid var(--border)">
+      <span style="font-family:'Orbitron',monospace;font-size:11px;font-weight:700;
+        color:var(--cyan)">RANKING NACIONAL — <span id="mry">2026</span></span>
+      <button onclick="closeModal()" style="background:rgba(255,59,48,.15);
+        border:1px solid rgba(255,59,48,.3);color:#FF3B30;border-radius:5px;
+        padding:3px 9px;cursor:pointer;font-size:10.5px">✕ Cerrar</button>
+    </div>
+    <div style="overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr style="background:rgba(0,229,255,0.05)">
+          <th style="padding:8px 10px;color:var(--muted);font-size:7.5px;
+            text-transform:uppercase;text-align:center">#</th>
+          <th style="padding:8px 10px;color:var(--muted);font-size:7.5px;
+            text-transform:uppercase;text-align:left">Jefatura</th>
+          <th style="padding:8px 10px;color:var(--muted);font-size:7.5px;text-align:right">Incautado</th>
+          <th style="padding:8px 10px;color:var(--muted);font-size:7.5px;text-align:right">Part.%</th>
+          <th style="padding:8px 10px;color:var(--muted);font-size:7.5px;text-align:right">Casos</th>
+          <th style="padding:8px 10px;color:var(--muted);font-size:7.5px;text-align:right">Detenidos</th>
+        </tr></thead>
+        <tbody id="mrtb"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     SCRIPT — SOLO DATOS REALES DE GOOGLE SHEETS
+     No hay datos demo. Si falla el servidor,
+     se muestra error con botón de reintento.
+════════════════════════════════════════════ -->
+<script>
+// ══════════════════════════════════════════════
+// ⚠️  CONFIGURACIÓN — REEMPLAZA CON TUS VALORES
+// ══════════════════════════════════════════════
+const APPS_URL = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
+mapboxgl.accessToken = 'pk.eyJ1IjoiVFVfVVNVQVJJTyIsImEiOiJUVV9UT0tFTiJ9.TU_TOKEN_REAL';
+
+// Meta CRAC (respaldo local si CONFIG falla)
+const META_CRAC = 5300000;
+
+// Colores por ID de jefatura
+const JCOL = {
+  J001:'#00E5FF',J002:'#00B4D8',J003:'#00C853',J004:'#7BFF6A',
+  J005:'#FFC107',J006:'#FF9800',J007:'#FF5722',J008:'#9C27B0',
+  J009:'#E91E63',J010:'#F44336',J011:'#2196F3',J012:'#3F51B5',
+  J013:'#009688',J014:'#4CAF50',J015:'#8BC34A',J016:'#CDDC39'
+};
+
+// Colores niveles mapa
+const NVC = {MA:'#00C853',A:'#7BFF6A',M:'#FFC107',B:'#FF3B30'};
+const NVL = {MA:'Muy Alto', A:'Alto', M:'Medio', B:'Bajo / Sin datos'};
+
+// Estado global — SOLO datos del servidor
+const S = {
+  ch:{},       // charts ApexCharts
+  map:null,    // instancia Mapbox
+  mkrs:[],     // markers activos
+  mReady:false,// mapa listo
+  pendMkr:null,// puntos pendientes de dibujar
+  unidad:'g',  // 'g' o 'kg'
+  lastRank:null,// último ranking para modal
+  compRaw:null, // datos comparativa para cambio de unidad
+  cargando:false
+};
+
+// ══════════════════════════════════════════════
+// NAVEGACIÓN SIDEBAR
+// ══════════════════════════════════════════════
+function navTo(secId, el){
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  const sec=document.getElementById(secId);
+  if(sec) sec.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ══════════════════════════════════════════════
+// INICIALIZACIÓN
+// ══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', ()=>{
+  initMap();
+  reload();
+
+  // Filtros globales → recargar todo
+  ['f-year','f-periodo','f-zona','f-jefatura'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', ()=>{
+      skels();
+      setTimeout(reload, 200);
+    });
+  });
+
+  // Ranking: año propio
+  document.getElementById('ry').addEventListener('change', ()=>{
+    fetchRanking();
+  });
+
+  // Comparativa: filtro jefatura
+  document.getElementById('cj').addEventListener('change', ()=>{
+    fetchComparativa();
+  });
+
+  // Auto-refresh cada 5 minutos
+  setInterval(reload, 300000);
+
+  // Ticker
+  const msgs = [
+    'Datos en tiempo real desde Google Sheets',
+    'Meta CRAC 2026: 5.300.000 g',
+    'Dirección Nacional Antinarcóticos — Ecuador',
+    'Análisis operacional actualizado'
+  ];
+  let ti=0;
+  setInterval(()=>{
+    ti=(ti+1)%msgs.length;
+    const e=document.getElementById('bts');
+    e.style.opacity='0';
+    setTimeout(()=>{e.textContent=msgs[ti];e.style.opacity='1';},280);
+  },4500);
+});
+
+// ══════════════════════════════════════════════
+// FUNCIÓN PRINCIPAL DE CARGA
+// Única fuente de datos: Apps Script / Google Sheets
+// Sin fallback a datos ficticios
+// ══════════════════════════════════════════════
+async function reload(){
+  if(S.cargando) return;
+  S.cargando = true;
+
+  const y=gv('f-year'), p=gv('f-periodo'), z=gv('f-zona'), j=gv('f-jefatura');
+  document.getElementById('kyi').textContent = y==='TODOS'?'Todos':y;
+  document.getElementById('error-global').style.display = 'none';
+  document.getElementById('conn-status').style.color = 'var(--yellow)';
+  document.getElementById('conn-status').textContent = '⬤ Conectando...';
+  document.getElementById('bbt').textContent = 'CARGANDO DATOS...';
+
+  try {
+    // ── 1. Dashboard principal (KPIs + meta + ranking + alertas) ──
+    const url = `${APPS_URL}?action=getDashboardData&year=${y}&periodo=${p}&zona=${z}&jefatura=${j}`;
+    const resp = await fetchJSON(url);
+
+    if(resp.error) throw new Error(resp.error);
+
+    // Aplicar datos reales
+    if(resp.kpis)       drawKPIs(resp.kpis, y);
+    if(resp.meta)       drawMeta(resp.meta);
+    if(resp.ranking)    drawRanking(resp.ranking, y);
+    if(resp.alertas)    drawAlertas(resp.alertas);
+    if(resp.comparativa){ S.compRaw=resp.comparativa; drawCompChart(resp.comparativa); drawDeficits(resp.comparativa); }
+
+    // ── 2. Mapa (endpoint separado con coordenadas GPS) ──
+    const mapaResp = await fetchJSON(`${APPS_URL}?action=getMapData&year=${y}&zona=${z}&jefatura=${j}`);
+    if(mapaResp.puntos) drawMap(mapaResp.puntos);
+
+    // ── 3. Tendencias (todos los años) ──
+    const tendResp = await fetchJSON(`${APPS_URL}?action=getTendencias&zona=${z}&jefatura=${j}`);
+    if(tendResp.series) drawTend(tendResp);
+
+    // ── 4. Personal ──
+    const persResp = await fetchJSON(`${APPS_URL}?action=getPersonal&year=${y==='TODOS'?'2026':y}&zona=${z}&jefatura=${j}`);
+    if(persResp.personal) drawPersonal(persResp.personal);
+
+    // Actualizar estado
+    document.getElementById('lu').textContent =
+      new Date().toLocaleString('es-EC',{dateStyle:'short',timeStyle:'short'});
+    document.getElementById('conn-status').style.color = 'var(--green)';
+    document.getElementById('conn-status').textContent = '⬤ Conectado · Google Sheets';
+    document.getElementById('bbt').textContent = 'DATOS EN TIEMPO REAL · GOOGLE SHEETS';
+
+  } catch(err) {
+    console.error('Error cargando datos:', err);
+    mostrarError(err.message);
+  } finally {
+    S.cargando = false;
+  }
+}
+
+// ── fetchJSON con CORS y timeout ──────────────────────────────────────
+async function fetchJSON(url, timeoutMs=12000){
+  // Apps Script requiere que la URL sea accedida directamente (no desde fetch con modo cors)
+  // Necesitamos usar no-cors NO sirve (opaque). Debemos asegurarnos de que el script
+  // tenga el header correcto. Usamos el truco de jsonp-style si falla CORS.
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, {signal: controller.signal});
+    clearTimeout(timer);
+    const text = await r.text();
+    // Apps Script a veces devuelve texto con BOM o espacios
+    const clean = text.trim().replace(/^\uFEFF/,'');
+    return JSON.parse(clean);
+  } catch(e) {
+    clearTimeout(timer);
+    if(e.name === 'AbortError') throw new Error('Tiempo de espera agotado (>12s). Verifica la URL del Apps Script.');
+    throw e;
+  }
+}
+
+// ── Carga independiente del ranking (filtro de año propio) ────────────
+async function fetchRanking(){
+  const yr = gv('ry');
+  document.getElementById('rl').innerHTML = '<div class="sk" style="height:11px;margin:5px 0"></div>'.repeat(5);
+  try {
+    const resp = await fetchJSON(`${APPS_URL}?action=getRanking&year=${yr}&periodo=TODOS&zona=${gv('f-zona')}&jefatura=${gv('f-jefatura')}`);
+    if(resp.ranking) drawRanking(resp.ranking, yr);
+  } catch(e) {
+    document.getElementById('rl').innerHTML = '<div style="font-size:10px;color:var(--red);padding:8px">Error cargando ranking</div>';
+  }
+}
+
+// ── Carga independiente de comparativa (filtro jefatura) ─────────────
+async function fetchComparativa(){
+  const jf = gv('cj');
+  document.getElementById('cc').innerHTML = '<div class="sk" style="height:100%;margin:3px"></div>';
+  try {
+    const resp = await fetchJSON(`${APPS_URL}?action=getComparativa&zona=TODAS&jefatura=${jf}`);
+    if(resp.filas){
+      S.compRaw = resp.filas;
+      drawCompChart(resp.filas);
+      drawDeficits(resp.filas);
+    }
+  } catch(e) {
+    document.getElementById('cc').innerHTML = '<div style="font-size:10px;color:var(--red);padding:16px;text-align:center">Error cargando comparativa</div>';
+  }
+}
+
+// ══════════════════════════════════════════════
+// MOSTRAR ERROR
+// ══════════════════════════════════════════════
+function mostrarError(msg){
+  const box = document.getElementById('error-global');
+  document.getElementById('error-msg').textContent =
+    msg || 'Error de conexión. Verifica la URL del Apps Script.';
+  document.getElementById('error-url').textContent = APPS_URL;
+  box.style.display = 'block';
+  document.getElementById('conn-status').style.color = 'var(--red)';
+  document.getElementById('conn-status').textContent = '⬤ Sin conexión';
+  document.getElementById('bbt').textContent = 'ERROR DE CONEXIÓN';
+}
+
+// ══════════════════════════════════════════════
+// RENDER KPIs
+// ══════════════════════════════════════════════
+function drawKPIs(k, year){
+  const total = k.t||k.total||k.totalIncautado||0;
+  const coc   = k.c||k.cocaina||0;
+  const mar   = k.m||k.marihuana||0;
+  const her   = k.h||k.heroina||0;
+  const cas   = k.ca||k.casos||0;
+  const det   = k.d||k.detenidos||0;
+  const pc    = k.pc||k.pctCocaina||0;
+  const pm    = k.pm||k.pctMarihuana||0;
+  const ph    = k.ph||k.pctHeroina||0;
+
+  anim('kpi-total',    total, fG);
+  anim('kpi-cocaina',  coc,   fG);
+  anim('kpi-marihuana',mar,   fG);
+  anim('kpi-heroina',  her,   fG);
+  anim('kpi-casos',    cas,   n=>n.toLocaleString('es-EC'));
+  anim('kpi-detenidos',det,   n=>n.toLocaleString('es-EC'));
+
+  st('kpc', pc+'% del total');
+  st('kpm', pm+'% del total');
+  st('kph', ph+'% del total');
+
+  setTimeout(()=>{
+    sb('bc', pc); sb('bm', pm); sb('bh', ph);
+    if(year==='2026'){
+      const pct = Math.min((total/META_CRAC)*100, 100);
+      sb('bt', pct);
+      st('kmsub', Math.round(pct*10)/10 +'% de la meta 2026');
+    } else {
+      sb('bt',0);
+      st('kmsub','Total incautado');
+    }
+  }, 280);
+}
+
+// ══════════════════════════════════════════════
+// RENDER META CRAC
+// ══════════════════════════════════════════════
+function drawMeta(m){
+  const pct  = m.pct  || m.cumplimiento || 0;
+  const log  = m.log  || m.logrado      || 0;
+  const obj  = m.obj  || m.objetivo     || META_CRAC;
+  const proy = m.proy || m.proyeccion   || 0;
+  const prob = m.prob || m.probCumplimiento || 0;
+  const vari = m.vari !== undefined ? m.vari : (m.variacionInteranual || 0);
+
+  st('gp', pct.toFixed(2)+'%');
+  st('gs', fG(log)+' / '+fG(obj));
+  st('mproy', fG(proy));
+  st('mprob', prob.toFixed(2)+'%');
+
+  const ve = document.getElementById('mv');
+  ve.textContent = (vari>0?'+':'')+vari.toFixed(2)+'%';
+  ve.style.color = vari>=0 ? 'var(--green)' : 'var(--red)';
+
+  drawGauge(pct);
+  drawMiniVar(vari);
+}
+
+function drawGauge(pct){
+  if(S.ch.g) S.ch.g.destroy();
+  const col = pct>=80?'#00C853':pct>=50?'#FFC107':'#FF3B30';
+  S.ch.g = new ApexCharts(document.getElementById('cg'),{
+    series:[Math.min(pct,100)],
+    chart:{type:'radialBar',height:135,background:'transparent',sparkline:{enabled:true}},
+    plotOptions:{radialBar:{startAngle:-120,endAngle:120,hollow:{size:'55%'},
+      track:{background:'rgba(255,255,255,0.05)',strokeWidth:'100%'},
+      dataLabels:{show:false}}},
+    fill:{type:'gradient',gradient:{shade:'dark',type:'horizontal',
+      gradientToColors:[col],stops:[0,100]}},
+    colors:['#00E5FF'],theme:{mode:'dark'}
+  });
+  S.ch.g.render();
+}
+
+function drawMiniVar(v){
+  if(S.ch.mv) S.ch.mv.destroy();
+  // Solo mostramos el valor real, sin datos ficticios previos
+  S.ch.mv = new ApexCharts(document.getElementById('mvc'),{
+    series:[{data:[v]}],
+    chart:{type:'bar',height:44,sparkline:{enabled:true},
+      animations:{enabled:true,speed:700}},
+    plotOptions:{bar:{borderRadius:2,columnWidth:'40%'}},
+    colors:[v>=0?'#00C853':'#FF3B30'],
+    tooltip:{enabled:true,theme:'dark',y:{formatter:n=>(n>0?'+':'')+n.toFixed(2)+'%'}},
+    theme:{mode:'dark'}
+  });
+  S.ch.mv.render();
+}
+
+// ══════════════════════════════════════════════
+// RENDER RANKING
+// ══════════════════════════════════════════════
+function drawRanking(rnk, year){
+  if(!rnk||!rnk.length){
+    document.getElementById('rl').innerHTML =
+      '<div style="font-size:10px;color:var(--muted);padding:10px;text-align:center">Sin datos para el período seleccionado</div>';
+    return;
+  }
+  const maxV = Math.max(...rnk.map(j=>j.t||j.total||0), 1);
+  document.getElementById('rl').innerHTML = rnk.slice(0,10).map(j=>{
+    const tot = j.t||j.total||0;
+    const pct = (tot/maxV)*100;
+    const pos = j.pos||j.posicion||0;
+    const med = pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':pos;
+    const col = pos===1?'var(--green)':pos<=3?'var(--cyan)':'var(--cyan2)';
+    const nom = (j.n||j.nombre||'').replace('JOPC_','').replace('JOPC_ ','').trim();
+    return `<div class="ri">
+      <span class="rpos">${med}</span>
+      <span class="rnom" title="${j.n||j.nombre}">${nom}</span>
+      <div class="rbw"><div class="rb" data-w="${pct}"
+        style="background:${col};box-shadow:0 0 4px ${col}60"></div></div>
+      <span class="rval">${fGc(tot)}</span>
+    </div>`;
+  }).join('');
+
+  // Animar barras
+  setTimeout(()=>{
+    document.getElementById('rl').querySelectorAll('.rb').forEach(b=>{
+      const w=b.dataset.w; b.style.width='0%';
+      requestAnimationFrame(()=>setTimeout(()=>{ b.style.width=w+'%'; },15));
+    });
+  }, 40);
+
+  document.getElementById('mry').textContent = year||gv('ry');
+  S.lastRank = rnk;
+}
+
+// ══════════════════════════════════════════════
+// RENDER TENDENCIAS
+// ══════════════════════════════════════════════
+function drawTend(tend){
+  // Acepta tanto formato del servidor como formato calculado localmente
+  const s   = tend.series || tend.s || {};
+  const r26 = tend.serie2026Real || tend.r26 || (s['2026']||[]).map(v=>v||null);
+  const ult  = tend.ultimoMes2026 !== undefined ? tend.ultimoMes2026 :
+               (tend.ult !== undefined ? tend.ult : r26.reduce((l,v,i)=>v!=null?i:l, -1));
+
+  const labs = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  if(S.ch.t) S.ch.t.destroy();
+
+  S.ch.t = new ApexCharts(document.getElementById('ct'),{
+    series:[
+      {name:'2022', data:s['2022']||[], color:'#9C27B0'},
+      {name:'2023', data:s['2023']||[], color:'#2196F3'},
+      {name:'2024', data:s['2024']||[], color:'#00B4D8'},
+      {name:'2025', data:s['2025']||[], color:'#00C853'},
+      // 2026: null en meses sin datos → línea no trazada
+      {name:'2026', data:r26,           color:'#FFC107'}
+    ],
+    chart:{type:'line',height:230,background:'transparent',toolbar:{show:false},
+      animations:{enabled:true,easing:'easeinout',speed:800}},
+    stroke:{curve:'smooth',width:[1.5,1.5,1.5,2,2.5],dashArray:[0,0,0,0,0]},
+    markers:{size:[2,2,2,2,4],strokeWidth:0,hover:{size:5}},
+    xaxis:{categories:labs,labels:{style:{colors:'#5A8099',fontSize:'8px'}}},
+    yaxis:{labels:{style:{colors:'#5A8099',fontSize:'7.5px'},
+      formatter:v=>v==null?'':v>=1000000?(v/1000000).toFixed(1)+'M':
+                             v>=1000?(v/1000).toFixed(0)+'K':v}},
+    grid:{borderColor:'rgba(0,229,255,0.06)',strokeDashArray:4},
+    legend:{show:true,position:'top',labels:{colors:'#7A9BB5'},
+      fontSize:'8.5px',markers:{width:7,height:7}},
+    tooltip:{theme:'dark',style:{fontSize:'10px'},
+      y:{formatter:v=>v!=null?fG(v):'Sin datos'}},
+    theme:{mode:'dark'},
+    annotations: ult >= 0 ? {xaxis:[{
+      x:labs[ult],
+      borderColor:'rgba(255,193,7,0.4)',
+      label:{text:'Último dato 2026',
+        style:{background:'rgba(255,193,7,0.12)',color:'#FFC107',fontSize:'8px',
+          padding:{top:2,bottom:2,left:4,right:4}}}
+    }]} : {}
+  });
+  S.ch.t.render();
+
+  // Mensaje estacionalidad
+  const msg = tend.mensajeEstacionalidad || tend.mensajeEstacionalidad || '';
+  document.getElementById('me').textContent = msg;
+}
+
+// ══════════════════════════════════════════════
+// RENDER COMPARATIVA MENSUAL
+// ══════════════════════════════════════════════
+let _cd = null;
+
+function drawCompChart(comp){
+  if(!comp||!comp.length) return;
+  _cd = comp;
+
+  const AÑOS  = ['2022','2023','2024','2025','2026'];
+  const COL   = {'2022':'#9C27B0','2023':'#2196F3','2024':'#00B4D8','2025':'#00C853','2026':'#FFC107'};
+  const activos = comp.filter(r => AÑOS.some(a=>(r[a]||0)>0));
+  const cats    = activos.map(r=>(r.m||r.mes||'').slice(0,3));
+
+  if(S.ch.c) S.ch.c.destroy();
+
+  S.ch.c = new ApexCharts(document.getElementById('cc'),{
+    series: AÑOS.map(a=>({name:a, data:activos.map(r=>toU(r[a]||0))})),
+    chart:{type:'bar',height:208,background:'transparent',toolbar:{show:false},
+      animations:{enabled:true,easing:'easeinout',speed:650}},
+    plotOptions:{bar:{borderRadius:2,columnWidth:'78%'}},
+    colors: AÑOS.map(a=>COL[a]),
+    xaxis:{categories:cats,labels:{style:{colors:'#5A8099',fontSize:'8px'}}},
+    yaxis:{labels:{style:{colors:'#5A8099',fontSize:'7.5px'},
+      formatter:v=>v>=1000?(v/1000).toFixed(1)+'K':v.toFixed(0)}},
+    dataLabels:{enabled:false},
+    grid:{borderColor:'rgba(0,229,255,0.05)'},
+    legend:{show:true,position:'top',labels:{colors:'#7A9BB5'},
+      fontSize:'8.5px',markers:{width:6,height:6}},
+    tooltip:{theme:'dark',style:{fontSize:'10px'},
+      y:{formatter:v=>v.toLocaleString('es-EC',{maximumFractionDigits:2})+' '+lu()}},
+    theme:{mode:'dark'}
+  });
+  S.ch.c.render();
+}
+
+function drawDeficits(comp){
+  const el = document.getElementById('cad');
+  const defs = comp.filter(r=>(r.def||r.deficit2526||0)>0);
+  if(!defs.length){
+    el.innerHTML = '<span style="font-size:8.5px;color:var(--green)">'+
+      '<i class="fas fa-check-circle"></i> Sin déficit 2025→2026 detectado</span>';
+    return;
+  }
+  el.innerHTML = defs.map(r=>{
+    const defVal = r.def||r.deficit2526||0;
+    const fmt = toU(defVal).toLocaleString('es-EC',{maximumFractionDigits:2});
+    const mes = (r.m||r.mes||'').slice(0,3);
+    return `<span style="display:inline-flex;align-items:center;gap:3px;
+      background:rgba(255,59,48,0.12);border:1px solid rgba(255,59,48,0.3);
+      border-radius:16px;padding:2px 8px;font-size:8.5px;color:#FF3B30;font-weight:600">
+      <i class="fas fa-exclamation-triangle" style="font-size:7px"></i>
+      ${mes} — Déficit: −${fmt} ${lu()}
+    </span>`;
+  }).join('');
+}
+
+function setU(u){
+  S.unidad=u;
+  document.getElementById('bgr').className='ubtn'+(u==='g'?' act':'');
+  document.getElementById('bkg').className='ubtn'+(u==='kg'?' act':'');
+  if(_cd){ drawCompChart(_cd); drawDeficits(_cd); }
+}
+function toU(g){ return S.unidad==='kg' ? Math.round(g/1000*100)/100 : g; }
+function lu(){ return S.unidad==='kg'?'kg':'g'; }
+
+// ══════════════════════════════════════════════
+// RENDER PERSONAL
+// ══════════════════════════════════════════════
+function drawPersonal(pers){
+  if(!pers||!pers.length){
+    document.getElementById('ptb').innerHTML =
+      '<tr><td colspan="5" style="text-align:center;font-size:10px;color:var(--muted);padding:10px">Sin datos de personal</td></tr>';
+    return;
+  }
+  document.getElementById('ptb').innerHTML = pers.map(p=>{
+    const col = JCOL[p.id_jefatura||p.id||'']||'#5A8099';
+    const nom = (p.nombre||p.n||'').replace('JOPC_','').replace('JOPC_ ','').trim();
+    return `<tr>
+      <td><span style="display:inline-block;width:7px;height:7px;border-radius:50%;
+        background:${col};margin-right:4px"></span>${nom}</td>
+      <td style="color:var(--yellow);font-weight:600">${p.directivos||p.d||0}</td>
+      <td style="color:var(--cyan)">${p.to_guias||p.g||0}</td>
+      <td style="color:var(--muted)">${p.administrativos||p.a||0}</td>
+      <td style="font-weight:700">${p.total||p.t||0}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+// RENDER ALERTAS
+// ══════════════════════════════════════════════
+function drawAlertas(aa){
+  const ICO = {
+    TENDENCIA_POSITIVA:{i:'fa-arrow-trend-up',c:'var(--green)'},
+    BAJO_RENDIMIENTO:{i:'fa-triangle-exclamation',c:'var(--yellow)'},
+    ESTACIONALIDAD:{i:'fa-circle-info',c:'var(--yellow)'},
+    RIESGO_META:{i:'fa-circle-exclamation',c:'var(--red)'},
+    CRECIMIENTO_ATIPICO:{i:'fa-bolt',c:'var(--cyan)'}
+  };
+  document.getElementById('al').innerHTML = aa.map(a=>{
+    const cfg = ICO[a.tp||a.tipo]||{i:'fa-bell',c:'var(--muted)'};
+    const nv  = a.nv||a.nivel||'';
+    const bg  = nv==='VERDE'?'rgba(0,200,83,0.05)':nv==='ROJO'?'rgba(255,59,48,0.05)':'rgba(255,193,7,0.05)';
+    return `<div class="ai" style="background:${bg};border-left:2px solid ${cfg.c}">
+      <i class="fas ${cfg.i}" style="color:${cfg.c};font-size:12px;margin-top:2px;flex-shrink:0"></i>
+      <div style="flex:1">
+        <div style="font-size:10px;font-weight:600;color:${cfg.c}">${a.ti||a.titulo||''}</div>
+        <div style="font-size:9px;color:var(--muted);margin-top:2px;line-height:1.4">${a.mg||a.mensaje||''}</div>
+      </div>
+      <span style="font-size:8px;color:var(--muted);flex-shrink:0;margin-left:auto">${a.h||a.hora||''}</span>
+    </div>`;
+  }).join('');
+
+  const n = aa.length;
+  ['abadge','abadge2'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){ el.textContent=n; el.style.display=n>0?'inline-block':'none'; }
+  });
+}
+
+// ══════════════════════════════════════════════
+// MAPA OPERACIONAL — Mapbox GL JS
+// Los puntos vienen de CAT_JEFATURAS (servidor)
+// con LATITUD y LONGITUD reales
+// ══════════════════════════════════════════════
+function initMap(){
+  const el = document.getElementById('mapa');
+  if(!el) return;
+
+  // Verificar token
+  if(!mapboxgl.accessToken || mapboxgl.accessToken.includes('TU_TOKEN')){
+    el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;
+      height:100%;flex-direction:column;gap:10px;color:var(--muted);font-size:11px">
+      <i class="fas fa-map" style="font-size:24px;color:var(--yellow)"></i>
+      <strong style="color:var(--yellow)">Token Mapbox no configurado</strong>
+      <div style="font-size:9.5px;text-align:center;max-width:280px;line-height:1.6">
+        Edita index.html y reemplaza<br>
+        <code style="color:var(--cyan);background:rgba(0,229,255,0.1);
+          padding:1px 5px;border-radius:3px">mapboxgl.accessToken = 'TU_TOKEN_REAL'</code>
+      </div>
+    </div>`;
+    document.getElementById('ms').textContent = 'Token requerido';
+    return;
+  }
+
+  try {
+    S.map = new mapboxgl.Map({
+      container: 'mapa',
+      style: 'mapbox://styles/mapbox/dark-v11',
+      center: [-78.5, -1.8],
+      zoom: 5.4,
+      attributionControl: false
+    });
+    S.map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    S.map.addControl(new mapboxgl.AttributionControl({compact:true}));
+
+    S.map.on('load', ()=>{
+      S.mReady = true;
+      document.getElementById('ms').textContent = 'Mapa listo';
+      document.getElementById('ms').style.color = 'var(--green)';
+      // Si ya hay puntos pendientes, dibujarlos
+      if(S.pendMkr){ drawMap(S.pendMkr); S.pendMkr=null; }
+    });
+
+    S.map.on('error', e=>{
+      console.error('Mapbox error:', e);
+      document.getElementById('ms').textContent = 'Error en el mapa';
+      document.getElementById('ms').style.color = 'var(--red)';
+    });
+
+  } catch(e) {
+    console.error('initMap error:', e);
+    el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;
+      height:100%;color:var(--muted);font-size:11px;flex-direction:column;gap:8px">
+      <i class="fas fa-exclamation-triangle" style="color:var(--red)"></i>
+      Error inicializando mapa: ${e.message}
+    </div>`;
+  }
+}
+
+// CSS animación pulso de los markers
+const _mstyle = document.createElement('style');
+_mstyle.textContent = `
+@keyframes mpulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.7}}
+.mapboxgl-popup-content{
+  background:rgba(5,11,22,0.97)!important;
+  border:1px solid rgba(0,229,255,0.3)!important;
+  border-radius:8px!important;
+  padding:9px 12px!important;
+  color:#E0F4FF!important;
+  font-family:'Inter',sans-serif!important;
+}
+.mapboxgl-popup-tip{border-top-color:rgba(0,229,255,0.3)!important}
+`;
+document.head.appendChild(_mstyle);
+
+function drawMap(puntos){
+  if(!puntos||!puntos.length) return;
+
+  // Si el mapa aún no está listo, guardar para después
+  if(!S.mReady){ S.pendMkr = puntos; return; }
+
+  // Limpiar markers anteriores
+  S.mkrs.forEach(m=>m.remove());
+  S.mkrs = [];
+
+  let visible = 0;
+  puntos.forEach(p=>{
+    // Leer coordenadas — el servidor puede enviarlas en varios formatos
+    const lat = parseFloat(p.lat || p.LATITUD  || p.latitud  || 0);
+    const lng = parseFloat(p.lng || p.LONGITUD || p.longitud || 0);
+
+    if(!lat || !lng || isNaN(lat) || isNaN(lng)) return;
+    if(lat < -5 || lat > 2 || lng < -92 || lng > -75) return; // fuera de Ecuador
+
+    const nv  = p.nv || (p.nivel==='MUY_ALTO'?'MA':p.nivel==='ALTO'?'A':p.nivel==='MEDIO'?'M':'B');
+    const col = NVC[nv] || '#FF3B30';
+    const sz  = nv==='MA'?20:nv==='A'?16:nv==='M'?12:8;
+    const nom = p.n || p.nombre || p.JEFATURA || '';
+    const tot = p.t || p.total || 0;
+
+    // Crear elemento del marker
+    const el = document.createElement('div');
+    el.title = nom;
+    el.style.cssText = `
+      width:${sz}px;height:${sz}px;border-radius:50%;
+      background:${col};
+      border:2px solid rgba(255,255,255,0.4);
+      cursor:pointer;
+      box-shadow:0 0 ${sz}px ${col}, 0 0 ${sz*2}px ${col}60;
+      animation:mpulse ${1.4+Math.random()*.8}s ${Math.random()*.5}s infinite;
+    `;
+
+    // Popup con información real
+    const popup = new mapboxgl.Popup({
+      closeButton: false,
+      maxWidth: '220px',
+      offset: sz/2 + 2
+    }).setHTML(`
+      <div style="padding:2px">
+        <div style="font-weight:700;color:#00E5FF;margin-bottom:6px;font-size:12px">${nom}</div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:10px">
+          <span style="color:#5A8099">Zona:</span><span>${p.z||p.zona||p.ID_ZONA||'—'}</span>
+          <span style="color:#5A8099">Incautado:</span>
+          <span style="color:#00E5FF;font-weight:700">${fG(tot)}</span>
+          <span style="color:#5A8099">Casos:</span>
+          <span>${(p.c||p.casos||0).toLocaleString('es-EC')}</span>
+          <span style="color:#5A8099">Detenidos:</span>
+          <span>${(p.d||p.detenidos||0).toLocaleString('es-EC')}</span>
+          <span style="color:#5A8099">Nivel:</span>
+          <span style="color:${col};font-weight:600">${NVL[nv]||nv}</span>
+        </div>
+      </div>
+    `);
+
+    const marker = new mapboxgl.Marker(el)
+      .setLngLat([lng, lat])
+      .setPopup(popup)
+      .addTo(S.map);
+
+    // Abrir popup al hacer click en el marker
+    el.addEventListener('click', ()=>{
+      S.mkrs.forEach(m=>m.getPopup&&m.getPopup().isOpen&&m.getPopup().remove());
+      popup.addTo(S.map);
+    });
+
+    S.mkrs.push(marker);
+    visible++;
+  });
+
+  document.getElementById('ms').textContent = `${visible} jefaturas activas`;
+}
+
+// ══════════════════════════════════════════════
+// MODAL RANKING COMPLETO
+// ══════════════════════════════════════════════
+function showModal(){
+  if(!S.lastRank) return;
+  document.getElementById('mrtb').innerHTML = S.lastRank.map(j=>{
+    const tot = j.t||j.total||0;
+    const pos = j.pos||j.posicion||0;
+    const med = pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':pos;
+    const col = pos<=1?'var(--green)':pos<=3?'var(--cyan)':'var(--text)';
+    return `<tr style="border-bottom:1px solid rgba(0,229,255,0.04)">
+      <td style="padding:6px 10px;color:${col};font-weight:700;text-align:center">${med}</td>
+      <td style="padding:6px 10px">${j.n||j.nombre||''}</td>
+      <td style="padding:6px 10px;text-align:right;color:var(--cyan);font-weight:700">${fG(tot)}</td>
+      <td style="padding:6px 10px;text-align:right;color:var(--muted)">${(j.pct||j.participacion||0)}%</td>
+      <td style="padding:6px 10px;text-align:right">${(j.c||j.casos||0).toLocaleString('es-EC')}</td>
+      <td style="padding:6px 10px;text-align:right">${(j.d||j.detenidos||0).toLocaleString('es-EC')}</td>
+    </tr>`;
+  }).join('');
+  const m = document.getElementById('modR');
+  m.style.display='flex';
+  m.onclick = e=>{ if(e.target===m) closeModal(); };
+}
+function closeModal(){ document.getElementById('modR').style.display='none'; }
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function fG(g){
+  if(g==null) return '—';
+  g = Math.round(g);
+  if(g===0) return '0 g';
+  if(g>=1000000) return (g/1000000).toLocaleString('es-EC',{maximumFractionDigits:3})+' t';
+  if(g>=1000)    return (g/1000).toLocaleString('es-EC',{maximumFractionDigits:2})+' kg';
+  return g.toLocaleString('es-EC')+' g';
+}
+function fGc(g){
+  if(!g) return '—';
+  if(g>=1000000) return (g/1000000).toFixed(2)+'t';
+  if(g>=1000)    return (g/1000).toFixed(1)+'kg';
+  return g.toLocaleString('es-EC')+'g';
+}
+function anim(id, val, fmt){
+  const e=document.getElementById(id);
+  if(!e) return;
+  e.innerHTML = '';
+  const dur=1400, s0=performance.now();
+  const step=t=>{
+    const p=Math.min((t-s0)/dur,1), ea=1-Math.pow(1-p,3);
+    e.textContent=fmt(Math.round(val*ea));
+    if(p<1) requestAnimationFrame(step);
+    else e.textContent=fmt(val);
+  };
+  requestAnimationFrame(step);
+}
+function st(id,txt){ const e=document.getElementById(id); if(e) e.textContent=txt; }
+function sb(id,pct){ const e=document.getElementById(id); if(e) e.style.width=Math.min(pct,100)+'%'; }
+function gv(id){ const e=document.getElementById(id); return e?e.value:''; }
+function skels(){
+  ['kpi-total','kpi-cocaina','kpi-marihuana','kpi-heroina','kpi-casos','kpi-detenidos']
+    .forEach(id=>{ const e=document.getElementById(id); if(e) e.innerHTML='<div class="sk" style="height:12px;width:70%"></div>'; });
+}
+</script>
+</body>
+</html>
